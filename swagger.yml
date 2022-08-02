@@ -1,0 +1,652 @@
+---
+openapi: 3.0.0
+info:
+  title: Batch Entry API Facade
+  version: 1.0.0
+paths:
+  /web_orders:
+    get:
+      operationId: GetWebOrders
+      parameters:
+        - name: results
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Get list of web orders
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebOrderList"
+        default:
+          description: Invalid request to get list of web orders
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: CreateWebOrder
+      requestBody:
+        description: Create web order
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WebOrderRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Return created web order
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebOrder"
+        default:
+          description: Invalid request to create web order
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /web_orders/{WebOrderId}:
+    get:
+      operationId: GetWebOrder
+      parameters:
+        - in: path
+          name: WebOrderId
+          schema:
+            type: string
+          required: true
+      responses:
+        "200":
+          description: Retrieve existing web order
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebOrder"
+        default:
+          description: Invalid request to get web order
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /web_orders/{WebOrderId}/shipments/{ShipmentId}:
+    patch:
+      operationId: UpdateWebOrder
+      parameters:
+        - in: path
+          name: WebOrderId
+          schema:
+            type: string
+          required: true
+        - in: path
+          name: ShipmentId
+          schema:
+            type: string
+          required: true
+      requestBody:
+        description: Update existing web order
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WebShipmentPatchBody"
+        required: true
+      responses:
+        "200":
+          description: Return updated shipment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebShipment"
+        default:
+          description: Invalid request to update web order
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /web_orders/{WebOrderId}/shipments/{ShipmentId}/rates:
+    get:
+      operationId: GetWebOrderRates
+      parameters:
+        - in: path
+          name: WebOrderId
+          schema:
+            type: string
+          required: true
+        - in: path
+          name: ShipmentId
+          schema:
+            type: string
+          required: true
+      responses:
+        "200":
+          description: Get rates for order shipment
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WebRate"
+        default:
+          description: Invalid request to get rates for web order
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /web_orders/{WebOrderId}/shipments/{ShipmentId}/transactions:
+    post:
+      operationId: PurchaseLabel
+      parameters:
+        - in: path
+          name: WebOrderId
+          schema:
+            type: string
+          required: true
+        - in: path
+          name: ShipmentId
+          schema:
+            type: string
+          required: true
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                rate_id:
+                  type: string
+              required: ["rate_id"]
+        required: true
+      responses:
+        "201":
+          description: Empty response for now... what state is needed?
+        default:
+          description: Invalid request to purchase a label
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+components:
+  schemas:
+    BaseWebOrder:
+      type: object
+      properties:
+        created_at:
+          type: string
+        currency:
+          type: string
+        notes:
+          type: string
+        order_number:
+          type: string
+        order_status:
+          type: string
+        shipping_cost:
+          type: string
+        shipping_cost_currency:
+          type: string
+        shipping_method:
+          type: string
+        shop_app:
+          type: string
+        subtotal_price:
+          type: string
+        total_price:
+          type: string
+        total_tax:
+          type: string
+        total_weight_unit:
+          type: string
+        uses_line_items:
+          type: boolean
+        weight:
+          type: string
+        weight_unit:
+          type: string
+    WebOrder:
+      allOf:
+        - $ref: "#/components/schemas/BaseWebOrder"
+        - type: object
+          properties:
+            errors:
+              type: array
+              items:
+                type: object
+            hidden:
+              type: boolean
+            object_id:
+              type: string
+            object_owner:
+              type: string
+            validation_status:
+              type: string
+            line_items:
+              type: array
+              items:
+                $ref: "#/components/schemas/WebLineItem"
+            shipments:
+              type: array
+              items:
+                $ref: "#/components/schemas/WebShipment"
+            transactions:
+              type: array
+              items:
+                $ref: "#/components/schemas/WebTransaction"
+    WebOrderRequestBody:
+      allOf:
+        - $ref: "#/components/schemas/BaseWebOrder"
+        - type: object
+          properties:
+            address_from:
+              $ref: "#/components/schemas/WebAddressRequestBody"
+            address_to:
+              $ref: "#/components/schemas/WebAddressRequestBody"
+            line_items:
+              type: array
+              items:
+                $ref: "#/components/schemas/WebLineItemRequestBody"
+    WebOrderList:
+      type: object
+      properties:
+        next:
+          type: string
+          nullable: true
+        previous:
+          type: string
+          nullable: true
+        results:
+          type: array
+          items:
+            $ref: "#/components/schemas/WebOrder"
+
+    BaseWebAddress:
+      type: object
+      properties:
+        city:
+          type: string
+        company:
+          type: string
+        country:
+          type: string
+        email:
+          type: string
+        name:
+          type: string
+        phone:
+          type: string
+        state:
+          type: string
+        street1:
+          type: string
+        street2:
+          type: string
+        street3:
+          type: string
+        street_no:
+          type: string
+        zip:
+          type: string
+    WebAddressRequestBody:
+      allOf:
+        - $ref: "#/components/schemas/BaseWebAddress"
+    WebAddress:
+      allOf:
+        - $ref: "#/components/schemas/BaseWebAddress"
+        - type: object
+          properties:
+            ip:
+              type: string
+            is_residential:
+              type: boolean
+            latitude:
+              type: string
+            longitude:
+              type: string
+            metadata:
+              type: string
+            object_created:
+              type: string
+            object_id:
+              type: string
+            object_purpose:
+              type: string
+            object_source:
+              type: string
+            object_state:
+              type: string
+            object_updated:
+              type: string
+
+    BaseWebLineItem:
+      type: object
+      properties:
+        country_of_origin:
+          type: string
+        currency:
+          type: string
+        quantity:
+          type: integer
+          format: int32
+        sku:
+          type: string
+        title:
+          type: string
+        unit_amount:
+          type: string
+        unit_weight:
+          type: string
+        weight_unit:
+          type: string
+    WebLineItemRequestBody:
+      allOf:
+        - $ref: "#/components/schemas/BaseWebLineItem"
+    WebLineItem:
+      allOf:
+        - $ref: "#/components/schemas/BaseWebLineItem"
+        - type: object
+          properties:
+            is_fulfilled:
+              type: boolean
+            total_amount:
+              type: string
+            total_weight:
+              type: string
+            variant:
+              type: string
+            variant_title:
+              type: string
+
+    WebShipment:
+      type: object
+      properties:
+        id:
+          description: The batch_entry id
+          type: string
+        address_from:
+          $ref: "#/components/schemas/WebAddress"
+        address_return:
+          $ref: "#/components/schemas/WebAddress"
+        address_to:
+          $ref: "#/components/schemas/WebAddress"
+        alternate_address_to:
+          type: string
+        carrier_accounts:
+          type: array
+          items:
+            type: object
+        #        TODO: complete customs
+        #        customs_declaration:
+        #          $ref: "#/components/schemas/CustomsDeclaration"
+        #        customs_items:
+        #          $ref: "#/components/schemas/CustomsItems"
+        extras:
+          $ref: "#/components/schemas/WebExtras"
+        # TODO: shouldn't these be associated with parcel?  ui only supports single parcel today but api supports
+        # multiple (see https://shippo.atlassian.net/wiki/spaces/PRODOCS/pages/104431705/Multi-piece+shipments+MPS)
+        line_items:
+          description: references to the ids of line_items in the WebOrder
+          type: array
+          items: # TODO: this is actually an object, quantity + id
+            type: string
+        object_created:
+          type: string
+        object_owner:
+          type: string
+        object_updated:
+          type: string
+        parcels:
+          type: array
+          items:
+            $ref: "#/components/schemas/WebParcel"
+        rates:
+          description: |-
+            If null, no rates are available, check status to determine whether rates can be calculated.
+          type: array
+          items:
+            $ref: "#/components/schemas/WebRate"
+        shipment_date:
+          type: string
+        status:
+          description: One of INCOMPLETE, PROCESSING_RATES, COMPLETE
+          type: string
+    WebShipmentPatchBody:
+      type: object
+      properties:
+        address_from:
+          $ref: "#/components/schemas/WebAddressRequestBody"
+        address_return:
+          $ref: "#/components/schemas/WebAddressRequestBody"
+        address_to:
+          $ref: "#/components/schemas/WebAddressRequestBody"
+        parcel:
+          $ref: "#/components/schemas/WebParcel"
+        extras:
+          $ref: "#/components/schemas/WebExtras"
+
+    WebParcel:
+      properties:
+        distance_unit:
+          type: string
+        height:
+          type: string
+        length:
+          type: string
+        mass_unit:
+          type: string
+        weight:
+          type: string
+        width:
+          type: string
+        carrier_parcel_template:
+          $ref: "#/components/schemas/WebCarrierParcelTemplate"
+        user_parcel_template:
+          $ref: "#/components/schemas/WebUserParcelTemplate"
+      type: object
+    WebCarrierParcelTemplate:
+      properties:
+        api_token:
+          type: string
+        distance_unit:
+          type: string
+        height:
+          type: string
+        is_variable_dimensions:
+          type: boolean
+        length:
+          type: string
+        name:
+          type: string
+        provider_id:
+          type: string
+        token:
+          type: string
+        width:
+          type: string
+      type: object
+    WebUserParcelTemplate:
+      properties:
+        distance_unit:
+          type: string
+        height:
+          type: string
+        is_default:
+          type: boolean
+        length:
+          type: string
+        name:
+          type: string
+        object_id:
+          type: string
+        template:
+          $ref: "#/components/schemas/WebCarrierParcelTemplate"
+        weight:
+          type: string
+        weight_unit:
+          type: string
+        width:
+          type: string
+      type: object
+
+    WebRate:
+      properties:
+        amount:
+          type: string
+        amount_local:
+          type: string
+        arrives_by:
+          type: string
+        attributes:
+          type: array
+          items:
+            type: string
+        carrier_account:
+          type: string
+        currency:
+          type: string
+        currency_local:
+          type: string
+        duration_terms:
+          type: string
+        estimated_days:
+          type: integer
+          format: int32
+        messages:
+          type: array
+          items:
+            type: string
+        object_created:
+          type: string
+        object_id:
+          type: string
+        object_owner:
+          type: string
+        provider:
+          type: string
+        provider_image_200:
+          type: string
+        provider_image_75:
+          type: string
+        servicelevel:
+          $ref: "#/components/schemas/WebRatesServiceLevel"
+        shipment:
+          type: string
+        test:
+          type: boolean
+        zone:
+          type: string
+      type: object
+    WebRatesServiceLevel:
+      properties:
+        extended_token:
+          type: string
+        name:
+          type: string
+        parent_servicelevel:
+          type: string
+        terms:
+          type: string
+        token:
+          type: string
+      type: object
+
+    WebExtras:
+      properties:
+        alcohol:
+          $ref: "#/components/schemas/WebExtrasAlcohol"
+        dry_ice:
+          $ref: "#/components/schemas/WebExtrasDryIce"
+        insurance:
+          $ref: "#/components/schemas/WebExtrasInsurance"
+        is_bypass_address_validation:
+          type: boolean
+        is_bypass_customs:
+          type: boolean
+        is_return_requested:
+          type: boolean
+        packing_slip_text:
+          type: string
+        signature_confirmation:
+          type: string
+      type: object
+    WebExtrasAlcohol:
+      properties:
+        contains_alcohol:
+          type: boolean
+        recipient_type:
+          type: string
+      type: object
+    WebExtrasDryIce:
+      properties:
+        contains_dry_ice:
+          type: boolean
+        weight:
+          type: integer
+          format: int32
+        weight_unit_id:
+          type: string
+      type: object
+    WebExtrasInsurance:
+      type: object
+      properties:
+        amount:
+          type: string
+        content:
+          type: string
+        currency:
+          type: string
+        use_imported_amount:
+          type: boolean
+
+    WebTransaction:
+      type: object
+      properties:
+        commercial_invoice_url:
+          type: string
+        eta:
+          type: string
+        entry_point:
+          type: string
+        label_url:
+          type: string
+        messages:
+          type: array
+          items:
+            type: string
+        metadata:
+          type: string
+        object_id:
+          type: string
+        object_owner:
+          type: string
+        object_state:
+          type: string
+        object_status:
+          type: string
+        rate:
+          type: string
+        refund_request_date:
+          type: string
+        tracking_number:
+          type: string
+        tracking_url_provider:
+          type: string
+        was_test:
+          type: boolean
+
+    ErrorResponse:
+      type: object
+      oneOf:
+        - properties:
+            detail:
+              type: string
+        - properties:
+            details:
+              type: object
+              additionalProperties:
+                type: "array"
+                items:
+                  type: "string"
